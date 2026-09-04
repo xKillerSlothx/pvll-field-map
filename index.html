@@ -175,7 +175,14 @@
             onEachFeature: function (feature, layer) {
                 // Permanent text label centered on polygon
                 if (feature.properties.Field_Name && feature.geometry.type !== 'LineString') {
-                    layer.bindTooltip(feature.properties.Field_Name, {
+                    let labelContent = feature.properties.Field_Name;
+                    
+                    // Override the text with a symbol if it is a Restroom
+                    if (feature.properties.Feature_Class === 'Restroom') {
+                        labelContent = '<span style="font-size: 20px;">🚻</span>';
+                    }
+
+                    layer.bindTooltip(labelContent, {
                         permanent: true,
                         direction: 'center',
                         className: 'custom-polygon-label'
@@ -189,6 +196,7 @@
                     const status = (statusRecord.Status || 'Unknown').trim();
                     const notes = (statusRecord.Notes || '').trim();
                     const menuLink = (statusRecord.Menu_Link || '').trim();
+                    const volunteerLink = (statusRecord.Volunteer_Link || '').trim();
 
                     let badgeClass = 'status-unknown';
                     const lowerStatus = status.toLowerCase();
@@ -217,6 +225,7 @@
                         <span class="status-badge ${badgeClass}">${status.toUpperCase()}</span>
                         ${notes ? `<div class="popup-notes">${notes}</div>` : ''}
                         ${menuLink ? `<div style="margin-bottom: 8px;"><a href="${menuLink}" target="_blank" style="color: #0284c7; font-weight: bold; text-decoration: none;">📄 View Menu</a></div>` : ''}
+                        ${volunteerLink ? `<div style="margin-bottom: 8px;"><a href="${volunteerLink}" target="_blank" style="color: #16a34a; font-weight: bold; text-decoration: none;">🤝 Volunteer Signup</a></div>` : ''}
                         ${scheduleListHtml}
                     `;
                     layer.bindPopup(popupContent);
