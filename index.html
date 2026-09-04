@@ -144,7 +144,26 @@
             });
         }
 
+        // Array to store specific point features for zoom-based rendering
+        let pointLayers = [];
+
         L.geoJSON(geoData, {
+            // Handle point geometries
+            pointToLayer: function (feature, latlng) {
+                if (feature.properties.Feature_Class === 'Gopher') {
+                    const marker = L.marker(latlng, {
+                        icon: L.divIcon({
+                            className: 'custom-point-icon',
+                            html: '<span style="font-size: 24px; text-shadow: 1px 1px 2px #000;">🐿️</span>',
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        })
+                    });
+                    pointLayers.push(marker);
+                    return marker;
+                }
+            },
+
             style: function (feature) {
                 const fClass = feature.properties.Feature_Class;
                 const joinId = feature.properties.Join_ID ? feature.properties.Join_ID.trim() : null;
@@ -184,8 +203,8 @@
             },
 
             onEachFeature: function (feature, layer) {
-                // Permanent text label centered on polygon
-                if (feature.properties.Field_Name && feature.geometry.type !== 'LineString') {
+                // Permanent text label centered on polygon, excluding specific point features
+                if (feature.properties.Field_Name && feature.geometry.type !== 'LineString' && feature.properties.Feature_Class !== 'Gopher') {
                     let labelContent = feature.properties.Field_Name;
                     
                     if (feature.properties.Feature_Class === 'Restroom') {
@@ -200,6 +219,7 @@
                         className: 'custom-polygon-label'
                     });
                 }
+                
                 if (feature.properties.Feature_Class === 'Creek') {
                     layer.on('add', function () {
                         layer.setText(feature.properties.Field_Name, {
@@ -280,6 +300,22 @@
                 }
             }
         }).addTo(map);
+
+        // Update point layer visibility based on map zoom level
+        function updatePointVisibility() {
+            const currentZoom = map.getZoom();
+            pointLayers.forEach(marker => {
+                if (currentZoom >= 18) {
+                    if (!map.hasLayer(marker)) map.addLayer(marker);
+                } else {
+                    if (map.hasLayer(marker)) map.removeLayer(marker);
+                }
+            });
+        }
+
+        // Attach event listener and run initial check
+        map.on('zoomend', updatePointVisibility);
+        updatePointVisibility();
 
         // Legend control
         const legend = L.control({ position: 'bottomright' });
