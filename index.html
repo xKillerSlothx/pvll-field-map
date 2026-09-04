@@ -106,6 +106,7 @@
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-textpath@1.2.3/leaflet.textpath.min.js"></script>
 <script>
     // 1. Initialize Leaflet
     const map = L.map('map', {
@@ -152,6 +153,9 @@
                 if (fClass === 'Driveway') {
                     return { color: '#fbbf24', weight: 10, opacity: 0.9 };
                 }
+                if (fClass === 'Creek') {
+                    return { color: '#38bdf8', weight: 8, opacity: 0.8 }; 
+                }
                 if (fClass === 'Parking') {
                     return { color: '#94a3b8', fillColor: '#64748b', weight: 1.5, fillOpacity: 0.5 };
                 }
@@ -194,6 +198,20 @@
                         permanent: true,
                         direction: 'center',
                         className: 'custom-polygon-label'
+                    });
+                }
+                if (feature.properties.Feature_Class === 'Creek') {
+                    layer.on('add', function () {
+                        layer.setText(feature.properties.Field_Name, {
+                            center: true,
+                            offset: -8,
+                            attributes: {
+                                'fill': '#0284c7',
+                                'font-weight': 'bold',
+                                'font-size': '14',
+                                'text-shadow': '1px 1px 2px #fff'
+                            }
+                        });
                     });
                 }
 
