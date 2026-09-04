@@ -163,18 +163,18 @@
 
     // 3. Basemap layers (Caps network requests at 19, stretches up to 22)
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 22,
+        maxZoom: 20,
         maxNativeZoom: 19,
         attribution: '&copy; Esri'
     }).addTo(map);
 
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 22,
+        maxZoom: 20,
         maxNativeZoom: 19
     }).addTo(map);
 
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 22,
+        maxZoom: 20,
         maxNativeZoom: 19
     }).addTo(map);
 
@@ -363,7 +363,8 @@
         function updatePointVisibility() {
             const currentZoom = map.getZoom();
             pointLayers.forEach(marker => {
-                if (currentZoom >= 18) {
+                // Changed to 20 so the gopher only appears when fully zoomed in
+                if (currentZoom >= 20) {
                     if (!map.hasLayer(marker)) map.addLayer(marker);
                 } else {
                     if (map.hasLayer(marker)) map.removeLayer(marker);
@@ -375,7 +376,7 @@
         map.on('zoomend', updatePointVisibility);
         updatePointVisibility();
 
-        // Legend Control with Google Maps Directions integration
+        // Legend Control with Google Maps Directions and First Aid integration
         const legend = L.control({ position: 'bottomright' });
         legend.onAdd = function () {
             const div = L.DomUtil.create('div', 'map-legend');
@@ -393,6 +394,7 @@
                 
                 <div style="font-weight: bold; margin: 8px 0 4px 0; font-size: 13px;">Facilities</div>
                 <div class="legend-item"><span class="legend-color" style="background:#9333ea;"></span> 🍔 Snack Shack</div>
+                <div class="legend-item"><span style="color: #dc2626; font-weight: bold; width: 12px; display: inline-block; text-align: center;">✚</span> First Aid Kit</div>
                 <div class="legend-item"><span class="legend-color" style="background:#0284c7;"></span> 🚻 Restroom</div>
                 <div class="legend-item"><span class="legend-color" style="background:#64748b;"></span> Parking</div>
                 <div class="legend-item"><span class="legend-color" style="background:#fbbf24;"></span> Driveway</div>
