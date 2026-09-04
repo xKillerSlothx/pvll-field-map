@@ -198,13 +198,17 @@
                     const menuLink = (statusRecord.Menu_Link || '').trim();
                     const volunteerLink = (statusRecord.Volunteer_Link || '').trim();
 
+                    // 1. Hide Status Badge if it is the Snack Shack
+                    const isSnackShack = feature.properties.Feature_Class === 'Snack Shack';
                     let badgeClass = 'status-unknown';
                     const lowerStatus = status.toLowerCase();
                     if (lowerStatus === 'open') badgeClass = 'status-open';
                     else if (lowerStatus === 'closed') badgeClass = 'status-closed';
                     else if (lowerStatus === 'maintenance') badgeClass = 'status-maintenance';
+                    
+                    const badgeHtml = isSnackShack ? '' : `<span class="status-badge ${badgeClass}">${status.toUpperCase()}</span>`;
 
-                    // Schedule matching
+                    // 2. Upcoming Events (Games)
                     let scheduleListHtml = '';
                     if (sheetData && sheetData.scheduleData) {
                         const matchingEvents = sheetData.scheduleData.filter(evt => evt.Join_ID && evt.Join_ID.trim() === joinId);
@@ -220,13 +224,31 @@
                         }
                     }
 
+                    // 3. Practice Schedule
+                    let practiceHtml = '';
+                    if (sheetData && sheetData.practiceData) {
+                        const matchingPractices = sheetData.practiceData.filter(prac => prac.Join_ID && prac.Join_ID.trim() === joinId);
+                        if (matchingPractices.length > 0) {
+                            practiceHtml = `
+                                <div class="popup-schedule">
+                                    <strong>Practice Schedule:</strong>
+                                    <ul>
+                                        ${matchingPractices.map(prac => `<li><strong>${prac.Day || ''} ${prac.Time || ''}</strong>: ${prac.Team || ''}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    // 4. Build Final Popup Content
                     const popupContent = `
                         <div class="popup-title">${feature.properties.Field_Name}</div>
-                        <span class="status-badge ${badgeClass}">${status.toUpperCase()}</span>
+                        ${badgeHtml}
                         ${notes ? `<div class="popup-notes">${notes}</div>` : ''}
-                        ${menuLink ? `<div style="margin-bottom: 8px;"><a href="${menuLink}" target="_blank" style="color: #0284c7; font-weight: bold; text-decoration: none;">📄 View Menu</a></div>` : ''}
+                        ${menuLink ? `<div style="margin-bottom: 6px;"><a href="${menuLink}" target="_blank" style="color: #0284c7; font-weight: bold; text-decoration: none;">📄 View Menu</a></div>` : ''}
                         ${volunteerLink ? `<div style="margin-bottom: 8px;"><a href="${volunteerLink}" target="_blank" style="color: #16a34a; font-weight: bold; text-decoration: none;">🤝 Volunteer Signup</a></div>` : ''}
                         ${scheduleListHtml}
+                        ${practiceHtml}
                     `;
                     layer.bindPopup(popupContent);
                 }
