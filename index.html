@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Penn Valley Little League Field Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        /* Label styling over satellite tiles */
+        .custom-polygon-label {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 13px;
+            text-shadow: 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000;
+            pointer-events: none;
+        }
+
+        /* Popup styling */
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .popup-title {
+            margin: 0 0 4px 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .status-open { background: #dcfce7; color: #15803d; }
+        .status-closed { background: #fee2e2; color: #b91c1c; }
+        .status-maintenance { background: #fef3c7; color: #b45309; }
+        .status-unknown { background: #f1f5f9; color: #475569; }
+
+        .popup-notes {
+            font-size: 13px;
+            color: #334155;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .popup-schedule {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 6px;
+            margin-top: 6px;
+            font-size: 12px;
+            color: #1e293b;
+        }
+        .popup-schedule ul {
+            margin: 4px 0 0 0;
+            padding-left: 18px;
+        }
+        .popup-schedule li {
+            margin-bottom: 3px;
+        }
+
+        /* Legend */
+        .map-legend {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px 12px;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // 1. Initialize Leaflet
+    const map = L.map('map', {
+        maxZoom: 19
+    }).setView([39.2035, -121.1880], 17);
+
+    // 2. Basemap layers
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: '&copy; Esri'
+    }).addTo(map);
+
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19
+    }).addTo(map);
+
+    // 3. Data Endpoints
+    const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbyDiKP8vmGTR9CbQZcQVSwRGJFaSm9XUeg0bXi2su6MX8YDsu4ij48op9oQFcBPdOzi/exec';
+    const geoJsonUrl = 'PVLL.geojson';
+
+    // 4. Fetch and display
+    Promise.all([
+        fetch(geoJsonUrl).then(res => res.json()),
+        fetch(appsScriptUrl).then(res => res.json())
+    ]).then(([geoData, sheetData]) => {
+
+        const statusMap = new Map();
+        if (sheetData && sheetData.statusData) {
+            sheetData.statusData.forEach(row => {
+                if (row.Join_ID) statusMap.set(row.Join_ID.trim(), row);
+            });
+        }
+
+        L.geoJSON(geoData, {
+            style: function (feature) {
+                const fClass = feature.properties.Feature_Class;
+                const joinId = feature.properties.Join_ID ? feature.properties.Join_ID.trim() : null;
+
+                // Static elements
+                if (fClass === 'Driveway') {
+                    return { color: '#fbbf24', weight: 3, opacity: 0.9 };
+                }
+                if (fClass === 'Parking') {
+                    return { color: '#94a3b8', fillColor: '#64748b', weight: 1.5, fillOpacity: 0.35 };
+                }
+                if (fClass === 'Restroom') {
+                    return { color: '#38bdf8', fillColor: '#0284c7', weight: 1.5, fillOpacity: 0.5 };
+                }
+
+                // Dynamic elements (Fields / Snack Shack)
+                if (joinId && statusMap.has(joinId)) {
+                    const status = (statusMap.get(joinId).Status || '').trim().toLowerCase();
+                    if (status === 'open') {
+                        return { color: '#16a34a', fillColor: '#22c55e', weight: 2.5, fillOpacity: 0.45 };
+                    }
+                    if (status === 'closed') {
+                        return { color: '#dc2626', fillColor: '#ef4444', weight: 2.5, fillOpacity: 0.45 };
+                    }
+                    if (status === 'maintenance') {
+                        return { color: '#d97706', fillColor: '#f59e0b', weight: 2.5, fillOpacity: 0.45 };
+                    }
+                }
+
+                return { color: '#ffffff', fillColor: '#ffffff', weight: 1.5, fillOpacity: 0.2, dashArray: '3' };
+            },
+
+            onEachFeature: function (feature, layer) {
+                // Permanent text label centered on polygon
+                if (feature.properties.Field_Name && feature.geometry.type !== 'LineString') {
+                    layer.bindTooltip(feature.properties.Field_Name, {
+                        permanent: true,
+                        direction: 'center',
+                        className: 'custom-polygon-label'
+                    });
+                }
+
+                // Interactive popups for tracked items
+                const joinId = feature.properties.Join_ID ? feature.properties.Join_ID.trim() : null;
+                if (joinId) {
+                    const statusRecord = statusMap.get(joinId) || {};
+                    const status = (statusRecord.Status || 'Unknown').trim();
+                    const notes = (statusRecord.Notes || '').trim();
+
+                    let badgeClass = 'status-unknown';
+                    const lowerStatus = status.toLowerCase();
+                    if (lowerStatus === 'open') badgeClass = 'status-open';
+                    else if (lowerStatus === 'closed') badgeClass = 'status-closed';
+                    else if (lowerStatus === 'maintenance') badgeClass = 'status-maintenance';
+
+                    // Schedule matching
+                    let scheduleListHtml = '';
+                    if (sheetData && sheetData.scheduleData) {
+                        const matchingEvents = sheetData.scheduleData.filter(evt => evt.Join_ID && evt.Join_ID.trim() === joinId);
+                        if (matchingEvents.length > 0) {
+                            scheduleListHtml = `
+                                <div class="popup-schedule">
+                                    <strong>Upcoming Events:</strong>
+                                    <ul>
+                                        ${matchingEvents.map(evt => `<li><strong>${evt.Date || ''} ${evt.Time || ''}</strong>: ${evt.Event || ''}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    const popupContent = `
+                        <div class="popup-title">${feature.properties.Field_Name}</div>
+                        <span class="status-badge ${badgeClass}">${status}</span>
+                        ${notes ? `<div class="popup-notes">${notes}</div>` : ''}
+                        ${scheduleListHtml}
+                    `;
+                    layer.bindPopup(popupContent);
+                }
+            }
+        }).addTo(map);
+
+        // Legend control
+        const legend = L.control({ position: 'bottomright' });
+        legend.onAdd = function () {
+            const div = L.DomUtil.create('div', 'map-legend');
+            div.innerHTML = `
+                <div class="legend-item"><span class="legend-color" style="background:#22c55e;"></span> Open</div>
+                <div class="legend-item"><span class="legend-color" style="background:#ef4444;"></span> Closed</div>
+                <div class="legend-item"><span class="legend-color" style="background:#f59e0b;"></span> Maintenance</div>
+            `;
+            return div;
+        };
+        legend.addTo(map);
+
+    }).catch(err => {
+        console.error('Failed loading map assets:', err);
+    });
+</script>
+</body>
+</html>
