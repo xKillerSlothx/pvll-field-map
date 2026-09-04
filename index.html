@@ -154,7 +154,7 @@
                     return { color: '#fbbf24', weight: 10, opacity: 0.9 };
                 }
                 if (fClass === 'Creek') {
-                    return { color: '#38bdf8', weight: 8, opacity: 0.8 }; 
+                    return { color: '#38bdf8', weight: 4, opacity: 0.7 }; 
                 }
                 if (fClass === 'Parking') {
                     return { color: '#94a3b8', fillColor: '#64748b', weight: 1.5, fillOpacity: 0.5 };
@@ -204,7 +204,7 @@
                     layer.on('add', function () {
                         layer.setText(feature.properties.Field_Name, {
                             center: true,
-                            offset: -8,
+                            offset: 8,
                             attributes: {
                                 'fill': '#0284c7',
                                 'font-weight': 'bold',
