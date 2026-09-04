@@ -1244,6 +1244,20 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Field_Name": "Local Gopher",
+        "Feature_Class": "Gopher"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.1891059,
+          39.2038552
+        ]
+      }
     }
   ]
 }
