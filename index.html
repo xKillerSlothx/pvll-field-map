@@ -305,7 +305,7 @@
         function updatePointVisibility() {
             const currentZoom = map.getZoom();
             pointLayers.forEach(marker => {
-                if (currentZoom >= 20) {
+                if (currentZoom >= 19) {
                     if (!map.hasLayer(marker)) map.addLayer(marker);
                 } else {
                     if (map.hasLayer(marker)) map.removeLayer(marker);
