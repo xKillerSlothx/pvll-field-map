@@ -322,6 +322,12 @@
         legend.onAdd = function () {
             const div = L.DomUtil.create('div', 'map-legend');
             div.innerHTML = `
+                <div style="margin-bottom: 10px; text-align: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=39.2041,-121.1896" target="_blank" style="display: block; background: #0284c7; color: white; padding: 6px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px;">
+                        🚗 Get Directions
+                    </a>
+                </div>
+                
                 <div style="font-weight: bold; margin-bottom: 4px; font-size: 13px;">Field Status</div>
                 <div class="legend-item"><span class="legend-color" style="background:#22c55e;"></span> Open</div>
                 <div class="legend-item"><span class="legend-color" style="background:#ef4444;"></span> Closed</div>
