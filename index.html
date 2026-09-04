@@ -188,6 +188,7 @@
                     const statusRecord = statusMap.get(joinId) || {};
                     const status = (statusRecord.Status || 'Unknown').trim();
                     const notes = (statusRecord.Notes || '').trim();
+                    const menuLink = (statusRecord.Menu_Link || '').trim();
 
                     let badgeClass = 'status-unknown';
                     const lowerStatus = status.toLowerCase();
@@ -213,8 +214,9 @@
 
                     const popupContent = `
                         <div class="popup-title">${feature.properties.Field_Name}</div>
-                        <span class="status-badge ${badgeClass}">${status}</span>
+                        <span class="status-badge ${badgeClass}">${status.toUpperCase()}</span>
                         ${notes ? `<div class="popup-notes">${notes}</div>` : ''}
+                        ${menuLink ? `<div style="margin-bottom: 8px;"><a href="${menuLink}" target="_blank" style="color: #0284c7; font-weight: bold; text-decoration: none;">📄 View Menu</a></div>` : ''}
                         ${scheduleListHtml}
                     `;
                     layer.bindPopup(popupContent);
