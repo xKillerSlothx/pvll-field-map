@@ -79,6 +79,21 @@
             margin-bottom: 3px;
         }
 
+        /* Find Me Button */
+        .locate-btn {
+            background-color: #ffffff;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-radius: 4px;
+            width: 34px;
+            height: 34px;
+            line-height: 30px;
+            text-align: center;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+        }
+        .locate-btn:hover { background-color: #f4f4f4; }
+
         /* Legend */
         .map-legend {
             background: rgba(255, 255, 255, 0.95);
@@ -105,38 +120,75 @@
 
 <div id="map"></div>
 
+<!-- Leaflet & Plugins -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-textpath@1.2.3/leaflet.textpath.min.js"></script>
+
 <script>
-    // 1. Initialize Leaflet
+    // 1. Initialize Leaflet (Allows zooming deeper than native Esri tiles)
     const map = L.map('map', {
-        maxZoom: 19
+        maxZoom: 22
     }).setView([39.2035, -121.1880], 17);
 
-    // 2. Basemap layers
+    // 2. Add "Find Me" Control
+    const locateControl = L.control({ position: 'topleft' });
+    locateControl.onAdd = function () {
+        const btn = L.DomUtil.create('button', 'locate-btn');
+        btn.innerHTML = '📍';
+        btn.title = 'Find My Location';
+        btn.onclick = function (e) {
+            e.stopPropagation();
+            map.locate({ setView: true, maxZoom: 18 });
+        };
+        return btn;
+    };
+    locateControl.addTo(map);
+
+    // Handle location found/error events
+    let userMarker;
+    map.on('locationfound', function (e) {
+        if (userMarker) {
+            userMarker.setLatLng(e.latlng);
+        } else {
+            // Drops a pulsing blue dot on the user's location
+            userMarker = L.circleMarker(e.latlng, {
+                radius: 8, fillColor: "#3b82f6", color: "#ffffff", 
+                weight: 2, opacity: 1, fillOpacity: 1
+            }).addTo(map);
+        }
+    });
+    map.on('locationerror', function (e) {
+        alert("Could not access your location. Please check your device settings.");
+    });
+
+    // 3. Basemap layers (Caps network requests at 19, stretches up to 22)
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19,
+        maxZoom: 22,
+        maxNativeZoom: 19,
         attribution: '&copy; Esri'
     }).addTo(map);
 
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19
+        maxZoom: 22,
+        maxNativeZoom: 19
     }).addTo(map);
 
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19
+        maxZoom: 22,
+        maxNativeZoom: 19
     }).addTo(map);
 
-    // 3. Data Endpoints
+    // 4. Data Endpoints
     const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbyDiKP8vmGTR9CbQZcQVSwRGJFaSm9XUeg0bXi2su6MX8YDsu4ij48op9oQFcBPdOzi/exec';
     const geoJsonUrl = 'PVLL.geojson';
 
-    // 4. Fetch and display
+    // 5. Fetch and display data
     Promise.all([
         fetch(geoJsonUrl).then(res => res.json()),
         fetch(appsScriptUrl).then(res => res.json())
     ]).then(([geoData, sheetData]) => {
 
+        // Build a lookup map for Google Sheet data
         const statusMap = new Map();
         if (sheetData && sheetData.statusData) {
             sheetData.statusData.forEach(row => {
@@ -148,13 +200,13 @@
         let pointLayers = [];
 
         L.geoJSON(geoData, {
-            // Handle point geometries
+            // Handle point geometries (like the Easter Egg Gopher)
             pointToLayer: function (feature, latlng) {
                 if (feature.properties.Feature_Class === 'Gopher') {
                     const marker = L.marker(latlng, {
                         icon: L.divIcon({
                             className: 'custom-point-icon',
-                            html: '<span style="font-size: 20px; text-shadow: 1px 1px 2px #000;">🐿️</span>',
+                            html: '<span style="font-size: 24px; text-shadow: 1px 1px 2px #000;">🐿️</span>',
                             iconSize: [30, 30],
                             iconAnchor: [15, 15]
                         })
@@ -173,7 +225,7 @@
                     return { color: '#fbbf24', weight: 10, opacity: 0.9 };
                 }
                 if (fClass === 'Creek') {
-                    return { color: '#38bdf8', weight: 4, opacity: 0.7 }; 
+                    return { color: '#38bdf8', weight: 4, opacity: 0.7, dashArray: '8, 8' }; 
                 }
                 if (fClass === 'Parking') {
                     return { color: '#94a3b8', fillColor: '#64748b', weight: 1.5, fillOpacity: 0.5 };
@@ -185,7 +237,7 @@
                     return { color: '#a855f7', fillColor: '#9333ea', weight: 2, fillOpacity: 0.6 };
                 }
 
-                // Dynamic elements (Fields / Snack Shack)
+                // Dynamic elements (Fields) colored by sheet status
                 if (joinId && statusMap.has(joinId)) {
                     const status = (statusMap.get(joinId).Status || '').trim().toLowerCase();
                     if (status === 'open') {
@@ -203,14 +255,15 @@
             },
 
             onEachFeature: function (feature, layer) {
-                // Permanent text label centered on polygon, excluding specific point features
+                // Permanent text labels centered on polygons (excludes point features)
                 if (feature.properties.Field_Name && feature.geometry.type !== 'LineString' && feature.properties.Feature_Class !== 'Gopher') {
                     let labelContent = feature.properties.Field_Name;
                     
                     if (feature.properties.Feature_Class === 'Restroom') {
                         labelContent = '<span style="font-size: 20px;">🚻</span>';
                     } else if (feature.properties.Feature_Class === 'Snack Shack') {
-                        labelContent = '<div style="text-align: center;"><span style="font-size: 20px;">🍔</span><br>' + feature.properties.Field_Name + '</div>';
+                        // Adds a red medical cross next to the burger icon
+                        labelContent = '<div style="text-align: center;"><span style="font-size: 20px;">🍔 <span style="color: #dc2626;">✚</span></span><br>' + feature.properties.Field_Name + '</div>';
                     }
 
                     layer.bindTooltip(labelContent, {
@@ -220,6 +273,7 @@
                     });
                 }
                 
+                // Curved text logic for the Creek
                 if (feature.properties.Feature_Class === 'Creek') {
                     layer.on('add', function () {
                         layer.setText(feature.properties.Field_Name, {
@@ -244,7 +298,7 @@
                     const menuLink = (statusRecord.Menu_Link || '').trim();
                     const volunteerLink = (statusRecord.Volunteer_Link || '').trim();
 
-                    // 1. Hide Status Badge if it is the Snack Shack
+                    // Hide Status Badge on Snack Shack
                     const isSnackShack = feature.properties.Feature_Class === 'Snack Shack';
                     let badgeClass = 'status-unknown';
                     const lowerStatus = status.toLowerCase();
@@ -253,8 +307,11 @@
                     else if (lowerStatus === 'maintenance') badgeClass = 'status-maintenance';
                     
                     const badgeHtml = isSnackShack ? '' : `<span class="status-badge ${badgeClass}">${status.toUpperCase()}</span>`;
+                    
+                    // First Aid notice explicitly for the Snack Shack popup
+                    const firstAidNotice = isSnackShack ? `<div style="background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; margin-bottom: 8px; text-align: center;">✚ First Aid Kit Located Here</div>` : '';
 
-                    // 2. Upcoming Events (Games)
+                    // Upcoming Events (Games)
                     let scheduleListHtml = '';
                     if (sheetData && sheetData.scheduleData) {
                         const matchingEvents = sheetData.scheduleData.filter(evt => evt.Join_ID && evt.Join_ID.trim() === joinId);
@@ -270,7 +327,7 @@
                         }
                     }
 
-                    // 3. Practice Schedule
+                    // Practice Schedule
                     let practiceHtml = '';
                     if (sheetData && sheetData.practiceData) {
                         const matchingPractices = sheetData.practiceData.filter(prac => prac.Join_ID && prac.Join_ID.trim() === joinId);
@@ -286,9 +343,10 @@
                         }
                     }
 
-                    // 4. Build Final Popup Content
+                    // Build Final Popup Content
                     const popupContent = `
                         <div class="popup-title">${feature.properties.Field_Name}</div>
+                        ${firstAidNotice}
                         ${badgeHtml}
                         ${notes ? `<div class="popup-notes">${notes}</div>` : ''}
                         ${menuLink ? `<div style="margin-bottom: 6px;"><a href="${menuLink}" target="_blank" style="color: #0284c7; font-weight: bold; text-decoration: none;">📄 View Menu</a></div>` : ''}
@@ -305,7 +363,7 @@
         function updatePointVisibility() {
             const currentZoom = map.getZoom();
             pointLayers.forEach(marker => {
-                if (currentZoom >= 19) {
+                if (currentZoom >= 18) {
                     if (!map.hasLayer(marker)) map.addLayer(marker);
                 } else {
                     if (map.hasLayer(marker)) map.removeLayer(marker);
@@ -313,11 +371,11 @@
             });
         }
 
-        // Attach event listener and run initial check
+        // Attach event listener and run initial check for zoom depth
         map.on('zoomend', updatePointVisibility);
         updatePointVisibility();
 
-        // Legend control
+        // Legend Control with Google Maps Directions integration
         const legend = L.control({ position: 'bottomright' });
         legend.onAdd = function () {
             const div = L.DomUtil.create('div', 'map-legend');
