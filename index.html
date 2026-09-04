@@ -122,6 +122,10 @@
         maxZoom: 19
     }).addTo(map);
 
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19
+    }).addTo(map);
+
     // 3. Data Endpoints
     const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbyDiKP8vmGTR9CbQZcQVSwRGJFaSm9XUeg0bXi2su6MX8YDsu4ij48op9oQFcBPdOzi/exec';
     const geoJsonUrl = 'PVLL.geojson';
